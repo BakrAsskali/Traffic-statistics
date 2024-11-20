@@ -1,0 +1,21 @@
+{
+	"bmi-installation" : null,
+	"compiler-frontend-variant" : "GNU",
+	"compiler-id" : "GNU",
+	"compiler-simulate-id" : "",
+	"config" : "Debug",
+	"cxx-modules" : {},
+	"dir-cur-bld" : "/home/bakr/CLionProjects/Projet/cmake-build-debug",
+	"dir-cur-src" : "/home/bakr/CLionProjects/Projet",
+	"dir-top-bld" : "/home/bakr/CLionProjects/Projet/cmake-build-debug",
+	"dir-top-src" : "/home/bakr/CLionProjects/Projet",
+	"exports" : [],
+	"forward-modules-from-target-dirs" : [],
+	"include-dirs" : 
+	[
+		"/usr/include/opencv4"
+	],
+	"language" : "CXX",
+	"linked-target-dirs" : [],
+	"module-dir" : "/home/bakr/CLionProjects/Projet/cmake-build-debug/CMakeFiles/OpenCV.dir"
+}

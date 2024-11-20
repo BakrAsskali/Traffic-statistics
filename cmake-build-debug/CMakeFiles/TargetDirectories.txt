@@ -1,0 +1,3 @@
+/home/bakr/CLionProjects/Projet/cmake-build-debug/CMakeFiles/OpenCV.dir
+/home/bakr/CLionProjects/Projet/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/bakr/CLionProjects/Projet/cmake-build-debug/CMakeFiles/rebuild_cache.dir
