@@ -17,21 +17,16 @@ int main() {
     dnn::Net net = dnn::readNetFromDarknet("D:/projects/Traffic-statistics/yolov3.cfg",
                                            "D:/projects/Traffic-statistics/yolov3.weights");
 
-    // Statistics variables (no need for global totalVehicles anymore)
-    std::map<std::string, int> vehicleCounts; // {"Car": 0, "Bus": 0, "Truck": 0, "Motorcycle": 0, "Person": 0}
+    // Statistics variables
+    std::map<std::string, int> vehicleCounts; // {"Car", "Bus", "Truck", "Motorcycle", "Person"}
+    std::map<std::string, int> regionCounts;  // {"E", "N", "S", "W"}
 
-    // Define colors for bounding boxes (for each vehicle type)
-    Scalar carColor(0, 255, 0); // Green
-    Scalar busColor(0, 0, 255); // Red
-    Scalar truckColor(255, 0, 0); // Blue
-    Scalar motorcycleColor(255, 165, 0); // Orange
-    Scalar personColor(255, 255, 0); // Yellow
+    // Define colors for bounding boxes
+    Scalar carColor(0, 255, 0), busColor(0, 0, 255), truckColor(255, 0, 0), motorcycleColor(255, 165, 0), personColor(255, 255, 0);
 
-    // Set a fixed size for the window (adjust as needed)
-    const int windowWidth = 800;  // Set the desired width
-    const int windowHeight = 600; // Set the desired height
-
-    // Create a window with a fixed size
+    // Create a window for displaying the video
+    const int windowWidth = 800;
+    const int windowHeight = 600;
     namedWindow("Traffic Monitoring", WINDOW_NORMAL);
     resizeWindow("Traffic Monitoring", windowWidth, windowHeight);
 
@@ -40,90 +35,103 @@ int main() {
         cap >> frame;
         if (frame.empty()) break;
 
-        // Resize the frame to fit the window
         Mat resizedFrame;
         float resizeFactor = std::min(float(windowWidth) / frame.cols, float(windowHeight) / frame.rows);
         resize(frame, resizedFrame, Size(), resizeFactor, resizeFactor);
 
-        // Prepare the frame for DNN input
         Mat blob = dnn::blobFromImage(resizedFrame, 1 / 255.0, Size(416, 416), Scalar(0, 0, 0), true, false);
         net.setInput(blob);
 
-        // Forward pass
         std::vector<Mat> outputs;
         net.forward(outputs, net.getUnconnectedOutLayersNames());
 
-        // Reset vehicle count for each frame
+        // Reset vehicle and region counts for the current frame
         std::map<std::string, int> frameVehicleCounts;
+        std::map<std::string, int> frameRegionCounts = {{"E", 0}, {"N", 0}, {"S", 0}, {"W", 0}};
 
-        // Parse detections and update statistics
+        int frameWidth = resizedFrame.cols;
+        int frameHeight = resizedFrame.rows;
+
         for (size_t i = 0; i < outputs.size(); ++i) {
             float* data = (float*)outputs[i].data;
             for (int j = 0; j < outputs[i].rows; ++j, data += outputs[i].cols) {
                 float confidence = data[4];
-                if (confidence > 0.5) { // Confidence threshold
+                if (confidence > 0.5) {
                     int classId = std::max_element(data + 5, data + outputs[i].cols) - (data + 5);
                     Rect box;
-                    int xCenter = static_cast<int>(data[0] * resizedFrame.cols);
-                    int yCenter = static_cast<int>(data[1] * resizedFrame.rows);
-                    int width = static_cast<int>(data[2] * resizedFrame.cols);
-                    int height = static_cast<int>(data[3] * resizedFrame.rows);
+                    int xCenter = static_cast<int>(data[0] * frameWidth);
+                    int yCenter = static_cast<int>(data[1] * frameHeight);
+                    int width = static_cast<int>(data[2] * frameWidth);
+                    int height = static_cast<int>(data[3] * frameHeight);
                     box = Rect(xCenter - width / 2, yCenter - height / 2, width, height);
 
-                    // Draw bounding box and label
                     Scalar color;
                     std::string label;
-                    if (classId == 2) {  // Car
+                    if (classId == 2) {
                         frameVehicleCounts["Car"]++;
                         label = "Car";
                         color = carColor;
-                    } else if (classId == 5) {  // Bus
+                    } else if (classId == 5) {
                         frameVehicleCounts["Bus"]++;
                         label = "Bus";
                         color = busColor;
-                    } else if (classId == 7) {  // Truck
+                    } else if (classId == 7) {
                         frameVehicleCounts["Truck"]++;
                         label = "Truck";
                         color = truckColor;
-                    } else if (classId == 1) {  // Motorcycle
+                    } else if (classId == 1) {
                         frameVehicleCounts["Motorcycle"]++;
                         label = "Motorcycle";
                         color = motorcycleColor;
-                    } else if (classId == 0) {  // Person
+                    } else if (classId == 0) {
                         frameVehicleCounts["Person"]++;
                         label = "Person";
                         color = personColor;
                     } else {
-                        continue; // Skip non-vehicle or irrelevant classes
+                        continue;
                     }
 
-                    // Draw the rectangle and label
+                    // Determine region
+                    std::string region;
+                    if (xCenter < frameWidth / 2 && yCenter < frameHeight / 2) {
+                        region = "N"; // North
+                    } else if (xCenter < frameWidth / 2 && yCenter >= frameHeight / 2) {
+                        region = "W"; // West
+                    } else if (xCenter >= frameWidth / 2 && yCenter < frameHeight / 2) {
+                        region = "E"; // East
+                    } else {
+                        region = "S"; // South
+                    }
+                    frameRegionCounts[region]++;
+
+                    // Draw bounding box and label
                     rectangle(resizedFrame, box, color, 2);
-                    putText(resizedFrame, label, Point(box.x, box.y - 10), FONT_HERSHEY_SIMPLEX, 0.5, color, 2);
+                    putText(resizedFrame, label + " (" + region + ")", Point(box.x, box.y - 10), FONT_HERSHEY_SIMPLEX, 0.5, color, 2);
                 }
             }
         }
 
-        // Calculate total vehicles for the frame by summing individual counts
         int totalVehicles = 0;
-        for (const auto& category : frameVehicleCounts) {
-            totalVehicles += category.second;
+        for (const auto& count : frameVehicleCounts) {
+            totalVehicles += count.second;
         }
 
-        // Overlay statistics at the top of the frame
         int yOffset = 30;
         putText(resizedFrame, "Total Vehicles: " + std::to_string(totalVehicles), Point(10, yOffset), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0, 255, 0), 2);
         yOffset += 30;
-        for (const auto& category : frameVehicleCounts) {
-            std::string text = category.first + ": " + std::to_string(category.second);
-            putText(resizedFrame, text, Point(10, yOffset), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0, 255, 0), 2);
+        for (const auto& count : frameVehicleCounts) {
+            putText(resizedFrame, count.first + ": " + std::to_string(count.second), Point(10, yOffset), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0, 255, 0), 2);
             yOffset += 30;
         }
 
-        // Display the frame
-        imshow("Traffic Monitoring", resizedFrame);
+        // Overlay region counts
+        for (const auto& region : frameRegionCounts) {
+            putText(resizedFrame, "Region " + region.first + ": " + std::to_string(region.second), Point(10, yOffset), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0, 255, 0), 2);
+            yOffset += 30;
+        }
 
-        if (waitKey(1) == 27) break; // Exit on 'ESC'
+        imshow("Traffic Monitoring", resizedFrame);
+        if (waitKey(1) == 27) break;
     }
 
     return 0;
