@@ -3,36 +3,76 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <thread>
+#include <mutex>
+#include <boost/asio.hpp>
+#include <boost/beast/websocket.hpp>
+#include <nlohmann/json.hpp>
+#include <boost/beast/core/detail/base64.hpp>
 
 using namespace cv;
+using namespace std;
+namespace websocket = boost::beast::websocket;
+using tcp = boost::asio::ip::tcp;
+using json = nlohmann::json;
 
-int main() {
-    VideoCapture cap("D:/projects/Traffic-statistics/5jcg5vfx58-3/Videos 1/1/1.avi");
-    if (!cap.isOpened()) {
-        std::cerr << "Error: Cannot open video file." << std::endl;
-        return -1;
+std::mutex frameMutex;
+Mat globalFrame;
+json globalStats;
+
+std::string base64_encode(const unsigned char* data, size_t len) {
+    static const char base64_chars[] =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+    std::string encoded;
+    int i = 0;
+    int j = 0;
+    unsigned char char_array_3[3];
+    unsigned char char_array_4[4];
+
+    while (len--) {
+        char_array_3[i++] = *(data++);
+        if (i == 3) {
+            char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+            char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+            char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+            char_array_4[3] = char_array_3[2] & 0x3f;
+
+            for (i = 0; i < 4; i++)
+                encoded += base64_chars[char_array_4[i]];
+            i = 0;
+        }
     }
 
-    // Load DNN model for vehicle detection
-    dnn::Net net = dnn::readNetFromDarknet("D:/projects/Traffic-statistics/yolov3.cfg",
-                                           "D:/projects/Traffic-statistics/yolov3.weights");
+    if (i) {
+        for (j = i; j < 3; j++)
+            char_array_3[j] = '\0';
 
-    // Define colors for bounding boxes
-    Scalar carColor(0, 255, 0); // Green
-    Scalar busColor(0, 0, 255); // Red
-    Scalar truckColor(255, 0, 0); // Blue
-    Scalar motorcycleColor(255, 165, 0); // Orange
-    Scalar personColor(255, 255, 0); // Yellow
+        char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+        char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+        char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+        char_array_4[3] = char_array_3[2] & 0x3f;
 
-    // Define regions and combined regions
-    const std::string singleRegions[] = {"N", "E", "S", "W"};
-    const std::string combinedRegions[] = {
-        "NE", "NS", "NW", "EN", "ES", "EW", "SN", "SE", "SW", "WN", "WE", "WS"};
+        for (j = 0; j < i + 1; j++)
+            encoded += base64_chars[char_array_4[j]];
 
-    const int windowWidth = 800;
-    const int windowHeight = 600;
-    namedWindow("Traffic Monitoring", WINDOW_NORMAL);
-    resizeWindow("Traffic Monitoring", windowWidth, windowHeight);
+        while (i++ < 3)
+            encoded += '=';
+    }
+
+    return encoded;
+}
+
+void processVideo(VideoCapture& cap, dnn::Net& net, int windowWidth, int windowHeight) {
+    Scalar carColor(0, 255, 0);     // Green for cars
+    Scalar busColor(255, 0, 0);     // Blue for buses
+    Scalar truckColor(0, 0, 255);   // Red for trucks
+
+    map<string, int> totalVehicleCounts = {
+        {"Car", 0},
+        {"Bus", 0},
+        {"Truck", 0}
+    };
 
     while (true) {
         Mat frame;
@@ -43,35 +83,11 @@ int main() {
         float resizeFactor = std::min(float(windowWidth) / frame.cols, float(windowHeight) / frame.rows);
         resize(frame, resizedFrame, Size(), resizeFactor, resizeFactor);
 
-        // Calculate region boundaries
-        int midX = resizedFrame.cols / 2;
-        int midY = resizedFrame.rows / 2;
-
-        // Draw region boundaries
-        line(resizedFrame, Point(midX, 0), Point(midX, resizedFrame.rows), Scalar(255, 255, 255), 2);
-        line(resizedFrame, Point(0, midY), Point(resizedFrame.cols, midY), Scalar(255, 255, 255), 2);
-
-        // Add region labels
-        putText(resizedFrame, "N", Point(midX - 50, 30), FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2);
-        putText(resizedFrame, "E", Point(resizedFrame.cols - 60, midY - 10), FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2);
-        putText(resizedFrame, "S", Point(midX - 20, resizedFrame.rows - 20), FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2);
-        putText(resizedFrame, "W", Point(20, midY - 10), FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2);
-
-        // Prepare the frame for DNN input
         Mat blob = dnn::blobFromImage(resizedFrame, 1 / 255.0, Size(416, 416), Scalar(0, 0, 0), true, false);
         net.setInput(blob);
 
-        std::vector<Mat> outputs;
+        vector<Mat> outputs;
         net.forward(outputs, net.getUnconnectedOutLayersNames());
-
-        // Vehicle statistics
-        std::map<std::string, int> frameVehicleCounts;
-        std::map<std::string, int> regionCounts = {{"N", 0}, {"E", 0}, {"S", 0}, {"W", 0}};
-        std::map<std::string, int> combinedRegionCounts;
-
-        for (const auto& region : combinedRegions) {
-            combinedRegionCounts[region] = 0; // Initialize combined region counts
-        }
 
         for (size_t i = 0; i < outputs.size(); ++i) {
             float* data = (float*)outputs[i].data;
@@ -86,80 +102,103 @@ int main() {
                     int height = static_cast<int>(data[3] * resizedFrame.rows);
                     box = Rect(xCenter - width / 2, yCenter - height / 2, width, height);
 
-                    Scalar color;
-                    std::string label;
-                    if (classId == 2) {  // Car
-                        frameVehicleCounts["Car"]++;
-                        label = "Car";
-                        color = carColor;
-                    } else {
-                        continue;
+                    // Adjust class IDs based on your YOLO model's class mapping
+                    switch(classId) {
+                        case 2: // Car
+                            totalVehicleCounts["Car"]++;
+                            rectangle(resizedFrame, box, carColor, 2);
+                            break;
+                        case 5: // Bus (adjust based on your model)
+                            totalVehicleCounts["Bus"]++;
+                            rectangle(resizedFrame, box, busColor, 2);
+                            break;
+                        case 7: // Truck (adjust based on your model)
+                            totalVehicleCounts["Truck"]++;
+                            rectangle(resizedFrame, box, truckColor, 2);
+                            break;
                     }
-
-                    // Determine region
-                    std::string region;
-                    if (xCenter < midX && yCenter < midY) {
-                        region = "N";
-                    } else if (xCenter >= midX && yCenter < midY) {
-                        region = "E";
-                    } else if (xCenter >= midX && yCenter >= midY) {
-                        region = "S";
-                    } else {
-                        region = "W";
-                    }
-                    regionCounts[region]++;
-
-                    // Update combined region counts
-                    if (xCenter < midX) {
-                        if (yCenter < midY) combinedRegionCounts["NW"]++;
-                        if (yCenter >= midY) combinedRegionCounts["SW"]++;
-                    }
-                    if (xCenter >= midX) {
-                        if (yCenter < midY) combinedRegionCounts["NE"]++;
-                        if (yCenter >= midY) combinedRegionCounts["SE"]++;
-                    }
-
-                    // Draw rectangle and labels
-                    rectangle(resizedFrame, box, color, 2);
-                    putText(resizedFrame, label + " (" + region + ")", Point(box.x, box.y - 10), FONT_HERSHEY_SIMPLEX, 0.5, color, 2);
                 }
             }
         }
 
-        // Display total vehicle counts
-        int yOffset = 30;
-        putText(resizedFrame, "Vehicle Statistics:", Point(10, yOffset), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0, 255, 0), 2);
-        yOffset += 30;
-        for (const auto& category : frameVehicleCounts) {
-            std::string text = category.first + ": " + std::to_string(category.second);
-            putText(resizedFrame, text, Point(10, yOffset), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0, 255, 0), 2);
-            yOffset += 30;
+        json stats = {
+            {"ActiveVehicleCounts", {
+                {"Car", totalVehicleCounts["Car"]},
+                {"Bus", totalVehicleCounts["Bus"]},
+                {"Truck", totalVehicleCounts["Truck"]}
+            }},
+            {"VehicleCounts", totalVehicleCounts},
+            {"Total", totalVehicleCounts["Car"] + totalVehicleCounts["Bus"] + totalVehicleCounts["Truck"]}
+        };
+
+        {
+            lock_guard<std::mutex> lock(frameMutex);
+            globalFrame = resizedFrame.clone();
+            globalStats = stats;
         }
-
-        // Display regional vehicle counts
-        yOffset += 20;
-        putText(resizedFrame, "Vehicles by Region:", Point(10, yOffset), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0, 255, 0), 2);
-        yOffset += 30;
-        for (const auto& region : regionCounts) {
-            std::string text = region.first + ": " + std::to_string(region.second);
-            putText(resizedFrame, text, Point(10, yOffset), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0, 255, 0), 2);
-            yOffset += 30;
-        }
-
-        // Display combined regional vehicle counts
-        yOffset += 20;
-        putText(resizedFrame, "Vehicles by Combined Region:", Point(10, yOffset), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0, 255, 0), 2);
-        yOffset += 30;
-        for (const auto& region : combinedRegionCounts) {
-            std::string text = region.first + ": " + std::to_string(region.second);
-            putText(resizedFrame, text, Point(10, yOffset), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0, 255, 0), 2);
-            yOffset += 30;
-        }
-
-        imshow("Traffic Monitoring", resizedFrame);
-
-        if (waitKey(1) == 27) break;
     }
+}
+
+void websocketServer(boost::asio::io_context& ioc, unsigned short port) {
+    tcp::acceptor acceptor(ioc, tcp::endpoint(tcp::v4(), port));
+    while (true) {
+        try {
+            tcp::socket socket(ioc);
+            acceptor.accept(socket);
+            websocket::stream<tcp::socket> ws(std::move(socket));
+            ws.accept();
+
+            while (true) {
+                {
+                    lock_guard<std::mutex> lock(frameMutex);
+                    if (!globalFrame.empty()) {
+                        vector<uchar> buffer;
+                        imencode(".jpg", globalFrame, buffer);
+
+                        string encodedImage = base64_encode(buffer.data(), buffer.size());
+
+                        json message = {
+                            {"frame", encodedImage},
+                            {"stats", globalStats}
+                        };
+
+                        ws.text(true);
+                        string messageStr = message.dump();
+                        ws.write(boost::asio::buffer(messageStr));
+                    }
+                }
+                this_thread::sleep_for(chrono::milliseconds(30));
+            }
+        }
+        catch (const std::exception& e) {
+            cerr << "WebSocket error: " << e.what() << endl;
+        }
+    }
+}
+
+int main() {
+    const std::string videoPath = "/home/bakr/CLionProjects/Projet/5jcg5vfx58-3/Videos 2/2/2.avi";
+    VideoCapture cap(videoPath);
+    if (!cap.isOpened()) {
+        cerr << "Error: Cannot open video file." << endl;
+        return -1;
+    }
+
+    dnn::Net net = dnn::readNetFromDarknet(
+        "/home/bakr/CLionProjects/Projet/yolov3.cfg",
+        "/home/bakr/CLionProjects/Projet/yolov3_final.weights"
+    );
+
+    int windowWidth = 800;
+    int windowHeight = 600;
+
+    thread videoProcessingThread(processVideo, ref(cap), ref(net), windowWidth, windowHeight);
+
+    boost::asio::io_context ioc;
+    thread serverThread(websocketServer, ref(ioc), 8080);
+
+    videoProcessingThread.join();
+    serverThread.join();
 
     return 0;
 }

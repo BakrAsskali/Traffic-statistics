@@ -1,71 +1,67 @@
-"use client";
-
-import { useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
-import { Camera } from "lucide-react";
 
 export function VideoStream() {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [vehicleCount, setVehicleCount] = useState(0);
+  const [stats, setStats] = useState({});
 
   useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.src = "https://example.com/traffic-feed";
-    }
+    const socket = new WebSocket("ws://localhost:8080");
+    const canvas = canvasRef.current;
+
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        // Decode and display image
+        if (data.frame && canvas) {
+          const ctx = canvas.getContext('2d');
+          const img = new Image();
+          img.onload = () => {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx?.drawImage(img, 0, 0);
+          };
+          img.src = `data:image/jpeg;base64,${data.frame}`;
+        }
+
+        // Update stats
+        if (data.stats) {
+          setStats(data.stats);
+          setVehicleCount(data.stats.VehicleCounts?.Car || 0);
+        }
+      } catch (error) {
+        console.error("WebSocket message parsing error:", error);
+      }
+    };
+
+    socket.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    return () => socket.close();
   }, []);
 
   return (
-    <div className="space-y-4">
-      <div className="relative rounded-lg overflow-hidden bg-gray-900">
-        <video
-          ref={videoRef}
-          className="w-full aspect-video object-cover"
-          autoPlay
-          muted
-          loop
-        >
-          <source src="/placeholder-video.mp4" type="video/mp4" />
-          Your browser does not support the video tag.
-        </video>
-        
-        {/* Region Overlays */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-4 left-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-sm">
-            <div className="flex items-center gap-1">
-              <Camera className="h-4 w-4" />
-              NE
-            </div>
-          </div>
-          <div className="absolute top-4 right-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-sm">
-            <div className="flex items-center gap-1">
-              <Camera className="h-4 w-4" />
-              NW
-            </div>
-          </div>
-          <div className="absolute bottom-4 left-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-sm">
-            <div className="flex items-center gap-1">
-              <Camera className="h-4 w-4" />
-              SE
-            </div>
-          </div>
-          <div className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-sm">
-            <div className="flex items-center gap-1">
-              <Camera className="h-4 w-4" />
-              SW
-            </div>
-          </div>
+      <div className="space-y-4">
+        <div className="relative rounded-lg overflow-hidden bg-gray-900">
+          <canvas
+              ref={canvasRef}
+              className="w-full aspect-video object-cover"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Card className="p-4 bg-green-50 border-green-100">
+            <p className="text-sm text-green-600 font-medium">Active Vehicles</p>
+            <p className="text-2xl font-bold text-green-700">{vehicleCount}</p>
+          </Card>
+          <Card className="p-4 bg-blue-50 border-blue-100">
+            <p className="text-sm text-blue-600 font-medium">Raw Stats</p>
+            <pre className="text-xs">{JSON.stringify(stats, null, 2)}</pre>
+          </Card>
         </div>
       </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <Card className="p-4 bg-green-50 border-green-100">
-          <p className="text-sm text-green-600 font-medium">Active Vehicles</p>
-          <p className="text-2xl font-bold text-green-700">24</p>
-        </Card>
-        <Card className="p-4 bg-blue-50 border-blue-100">
-          <p className="text-sm text-blue-600 font-medium">Current Speed</p>
-          <p className="text-2xl font-bold text-blue-700">45 km/h</p>
-        </Card>
-      </div>
-    </div>
   );
 }
