@@ -144,77 +144,77 @@ int main() {
         }
 
         // Define constants for layout
-        const int margin = 20; // Left margin
-        const int lineSpacing = 30; // Spacing between lines
-        const int sectionSpacing = 50; // Spacing between sections
+const int margin = 20; // Left margin
+const int lineSpacing = 30; // Spacing between lines
+const int sectionSpacing = 50; // Spacing between sections
 
-        // Initialize vertical offset for text
-        int yOffset = margin;
+// Initialize vertical offset for text
+int yOffset = margin;
 
-        // Define colors for titles and content
-        Scalar titleColor(0, 255, 255); // Cyan for titles
-        Scalar contentColor(255, 255, 255); // White for content
+// Define colors for titles and content
+Scalar titleColor(0, 255, 255); // Cyan for titles
+Scalar contentColor(255, 255, 255); // White for content
 
 
-        // Define font sizes
-        double titleFontSize = 0.7;
-        double contentFontSize = 0.7;
+// Define font sizes
+double titleFontSize = 0.7;
+double contentFontSize = 0.7;
 
-        // Section 1: Traffic Statistics
-        putText(resizedFrame, "Traffic Statistics:", Point(margin, yOffset), FONT_HERSHEY_SIMPLEX, titleFontSize, titleColor, 2);
-        yOffset += lineSpacing;
-        for (const auto& category : frameVehicleCounts) {
-            std::string text = category.first + ": " + std::to_string(category.second);
-            putText(resizedFrame, text, Point(margin, yOffset), FONT_HERSHEY_SIMPLEX, contentFontSize, contentColor, 1);
-            yOffset += lineSpacing;
-        }
+// Section 1: Traffic Statistics
+putText(resizedFrame, "Traffic Statistics:", Point(margin, yOffset), FONT_HERSHEY_SIMPLEX, titleFontSize, titleColor, 2);
+yOffset += lineSpacing;
+for (const auto& category : frameVehicleCounts) {
+    std::string text = category.first + ": " + std::to_string(category.second);
+    putText(resizedFrame, text, Point(margin, yOffset), FONT_HERSHEY_SIMPLEX, contentFontSize, contentColor, 1);
+    yOffset += lineSpacing;
+}
 
-        yOffset += sectionSpacing; // Add spacing before the next section
+yOffset += sectionSpacing; // Add spacing before the next section
 
-        // Section 2: Regional Vehicle Counts
-        putText(resizedFrame, "Vehicles by Region:", Point(margin, yOffset), FONT_HERSHEY_SIMPLEX, titleFontSize, titleColor, 2);
-        yOffset += lineSpacing;
-        for (const auto& region : regionCounts) {
-            std::string text = region.first + ": " + std::to_string(region.second);
-            putText(resizedFrame, text, Point(margin, yOffset), FONT_HERSHEY_SIMPLEX, contentFontSize, contentColor, 1);
-            yOffset += lineSpacing;
-        }
+// Section 2: Regional Vehicle Counts
+putText(resizedFrame, "Vehicles by Region:", Point(margin, yOffset), FONT_HERSHEY_SIMPLEX, titleFontSize, titleColor, 2);
+yOffset += lineSpacing;
+for (const auto& region : regionCounts) {
+    std::string text = region.first + ": " + std::to_string(region.second);
+    putText(resizedFrame, text, Point(margin, yOffset), FONT_HERSHEY_SIMPLEX, contentFontSize, contentColor, 1);
+    yOffset += lineSpacing;
+}
 
-        yOffset += sectionSpacing; // Add spacing before the next section
+yOffset += sectionSpacing; // Add spacing before the next section
 
-        // Section 3: Vehicle Statistics
-        putText(resizedFrame, "Vehicles Statistics:", Point(margin, yOffset), FONT_HERSHEY_SIMPLEX, titleFontSize, titleColor, 2);
-        yOffset += lineSpacing;
-        for (const auto& [vehicleType, stats] : vehicleStats) {
-            float avgSpeed = stats.speeds.empty() ? 0 : std::accumulate(stats.speeds.begin(), stats.speeds.end(), 0.0f) / stats.speeds.size();
-            float avgTime = stats.times.empty() ? 0 : std::accumulate(stats.times.begin(), stats.times.end(), 0.0f) / stats.times.size();
+// Section 3: Vehicle Statistics
+putText(resizedFrame, "Vehicles Statistics:", Point(margin, yOffset), FONT_HERSHEY_SIMPLEX, titleFontSize, titleColor, 2);
+yOffset += lineSpacing;
+for (const auto& [vehicleType, stats] : vehicleStats) {
+    float avgSpeed = stats.speeds.empty() ? 0 : std::accumulate(stats.speeds.begin(), stats.speeds.end(), 0.0f) / stats.speeds.size();
+    float avgTime = stats.times.empty() ? 0 : std::accumulate(stats.times.begin(), stats.times.end(), 0.0f) / stats.times.size();
 
-            std::string text = vehicleType + " - Avg Speed: " + std::to_string(avgSpeed) + " km/h, Avg Time: " + std::to_string(avgTime) + " sec";
-            putText(resizedFrame, text, Point(margin, yOffset), FONT_HERSHEY_SIMPLEX, contentFontSize, contentColor, 1);
-            yOffset += lineSpacing;
-        }
+    std::string text = vehicleType + " - Avg Speed: " + std::to_string(avgSpeed) + " km/h, Avg Time: " + std::to_string(avgTime) + " sec";
+    putText(resizedFrame, text, Point(margin, yOffset), FONT_HERSHEY_SIMPLEX, contentFontSize, contentColor, 1);
+    yOffset += lineSpacing;
+}
 
-        yOffset += sectionSpacing; // Add spacing before the next section
+yOffset += sectionSpacing; // Add spacing before the next section
 
-        // Section 4: Total Statistics
-        float totalSpeedSum = 0, totalTimeSum = 0;
-        int totalSpeedCount = 0, totalTimeCount = 0;
-        for (const auto& [_, stats] : vehicleStats) {
-            totalSpeedSum += std::accumulate(stats.speeds.begin(), stats.speeds.end(), 0.0f);
-            totalTimeSum += std::accumulate(stats.times.begin(), stats.times.end(), 0.0f);
-            totalSpeedCount += stats.speeds.size();
-            totalTimeCount += stats.times.size();
-        }
-        float totalAvgSpeed = totalSpeedCount ? totalSpeedSum / totalSpeedCount : 0;
-        float totalAvgTime = totalTimeCount ? totalTimeSum / totalTimeCount : 0;
+// Section 4: Total Statistics
+float totalSpeedSum = 0, totalTimeSum = 0;
+int totalSpeedCount = 0, totalTimeCount = 0;
+for (const auto& [_, stats] : vehicleStats) {
+    totalSpeedSum += std::accumulate(stats.speeds.begin(), stats.speeds.end(), 0.0f);
+    totalTimeSum += std::accumulate(stats.times.begin(), stats.times.end(), 0.0f);
+    totalSpeedCount += stats.speeds.size();
+    totalTimeCount += stats.times.size();
+}
+float totalAvgSpeed = totalSpeedCount ? totalSpeedSum / totalSpeedCount : 0;
+float totalAvgTime = totalTimeCount ? totalTimeSum / totalTimeCount : 0;
 
-        std::string totalText = "Total - Avg Speed: " + std::to_string(totalAvgSpeed) + " km/h, Avg Time: " + std::to_string(totalAvgTime) + " sec";
-        putText(resizedFrame, totalText, Point(margin, yOffset), FONT_HERSHEY_SIMPLEX, contentFontSize, contentColor, 1);
+std::string totalText = "Total - Avg Speed: " + std::to_string(totalAvgSpeed) + " km/h, Avg Time: " + std::to_string(totalAvgTime) + " sec";
+putText(resizedFrame, totalText, Point(margin, yOffset), FONT_HERSHEY_SIMPLEX, contentFontSize, contentColor, 1);
 
 
         imshow("Traffic Monitoring", resizedFrame);
 
-        if (waitKey(1) == 27) break;
+        if (waitKey(1) == 27) break; // Exit on 'ESC'
     }
 
     cap.release();
