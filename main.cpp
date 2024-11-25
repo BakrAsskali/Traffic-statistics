@@ -2,6 +2,7 @@
 #include <opencv2/dnn.hpp>
 #include <iostream>
 #include <map>
+#include <string>
 
 using namespace cv;
 
@@ -16,15 +17,17 @@ int main() {
     dnn::Net net = dnn::readNetFromDarknet("D:/projects/Traffic-statistics/yolov3.cfg",
                                            "D:/projects/Traffic-statistics/yolov3.weights");
 
-    // Define colors for bounding boxes (for each vehicle type)
+    // Define colors for bounding boxes
     Scalar carColor(0, 255, 0); // Green
     Scalar busColor(0, 0, 255); // Red
     Scalar truckColor(255, 0, 0); // Blue
     Scalar motorcycleColor(255, 165, 0); // Orange
     Scalar personColor(255, 255, 0); // Yellow
 
-    // Define regions
-    const std::string regions[] = {"N", "E", "S", "W"};
+    // Define regions and combined regions
+    const std::string singleRegions[] = {"N", "E", "S", "W"};
+    const std::string combinedRegions[] = {
+        "NE", "NS", "NW", "EN", "ES", "EW", "SN", "SE", "SW", "WN", "WE", "WS"};
 
     const int windowWidth = 800;
     const int windowHeight = 600;
@@ -64,6 +67,11 @@ int main() {
         // Vehicle statistics
         std::map<std::string, int> frameVehicleCounts;
         std::map<std::string, int> regionCounts = {{"N", 0}, {"E", 0}, {"S", 0}, {"W", 0}};
+        std::map<std::string, int> combinedRegionCounts;
+
+        for (const auto& region : combinedRegions) {
+            combinedRegionCounts[region] = 0; // Initialize combined region counts
+        }
 
         for (size_t i = 0; i < outputs.size(); ++i) {
             float* data = (float*)outputs[i].data;
@@ -84,22 +92,6 @@ int main() {
                         frameVehicleCounts["Car"]++;
                         label = "Car";
                         color = carColor;
-                    } else if (classId == 5) {  // Bus
-                        frameVehicleCounts["Bus"]++;
-                        label = "Bus";
-                        color = busColor;
-                    } else if (classId == 7) {  // Truck
-                        frameVehicleCounts["Truck"]++;
-                        label = "Truck";
-                        color = truckColor;
-                    } else if (classId == 1) {  // Motorcycle
-                        frameVehicleCounts["Motorcycle"]++;
-                        label = "Motorcycle";
-                        color = motorcycleColor;
-                    } else if (classId == 0) {  // Person
-                        frameVehicleCounts["Person"]++;
-                        label = "Person";
-                        color = personColor;
                     } else {
                         continue;
                     }
@@ -116,6 +108,16 @@ int main() {
                         region = "W";
                     }
                     regionCounts[region]++;
+
+                    // Update combined region counts
+                    if (xCenter < midX) {
+                        if (yCenter < midY) combinedRegionCounts["NW"]++;
+                        if (yCenter >= midY) combinedRegionCounts["SW"]++;
+                    }
+                    if (xCenter >= midX) {
+                        if (yCenter < midY) combinedRegionCounts["NE"]++;
+                        if (yCenter >= midY) combinedRegionCounts["SE"]++;
+                    }
 
                     // Draw rectangle and labels
                     rectangle(resizedFrame, box, color, 2);
@@ -135,7 +137,7 @@ int main() {
         }
 
         // Display regional vehicle counts
-        yOffset += 20; // Add spacing
+        yOffset += 20;
         putText(resizedFrame, "Vehicles by Region:", Point(10, yOffset), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0, 255, 0), 2);
         yOffset += 30;
         for (const auto& region : regionCounts) {
@@ -144,9 +146,19 @@ int main() {
             yOffset += 30;
         }
 
+        // Display combined regional vehicle counts
+        yOffset += 20;
+        putText(resizedFrame, "Vehicles by Combined Region:", Point(10, yOffset), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0, 255, 0), 2);
+        yOffset += 30;
+        for (const auto& region : combinedRegionCounts) {
+            std::string text = region.first + ": " + std::to_string(region.second);
+            putText(resizedFrame, text, Point(10, yOffset), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0, 255, 0), 2);
+            yOffset += 30;
+        }
+
         imshow("Traffic Monitoring", resizedFrame);
 
-        if (waitKey(1) == 27) break; // Exit on 'ESC'
+        if (waitKey(1) == 27) break;
     }
 
     return 0;
