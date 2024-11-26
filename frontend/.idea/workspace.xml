@@ -5,8 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b526b748-1b30-4f4c-8742-c4109548c5f1" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/components/vehicle-stats.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/vehicle-stats.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/components/video-stream.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/video-stream.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/../main.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -76,7 +75,7 @@
       <option name="presentableId" value="Default" />
       <updated>1732552741087</updated>
       <workItem from="1732552742282" duration="1607000" />
-      <workItem from="1732555549913" duration="309000" />
+      <workItem from="1732555549913" duration="998000" />
     </task>
     <servers />
   </component>

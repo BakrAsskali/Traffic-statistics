@@ -68,12 +68,6 @@ void processVideo(VideoCapture& cap, dnn::Net& net, int windowWidth, int windowH
     Scalar busColor(255, 0, 0);     // Blue for buses
     Scalar truckColor(0, 0, 255);   // Red for trucks
 
-    map<string, int> totalVehicleCounts = {
-        {"Car", 0},
-        {"Bus", 0},
-        {"Truck", 0}
-    };
-
     while (true) {
         Mat frame;
         cap >> frame;
@@ -88,6 +82,13 @@ void processVideo(VideoCapture& cap, dnn::Net& net, int windowWidth, int windowH
 
         vector<Mat> outputs;
         net.forward(outputs, net.getUnconnectedOutLayersNames());
+
+        // Reset active vehicle counts for the current frame
+        map<string, int> activeVehicleCounts = {
+            {"Car", 0},
+            {"Bus", 0},
+            {"Truck", 0}
+        };
 
         for (size_t i = 0; i < outputs.size(); ++i) {
             float* data = (float*)outputs[i].data;
@@ -105,15 +106,15 @@ void processVideo(VideoCapture& cap, dnn::Net& net, int windowWidth, int windowH
                     // Adjust class IDs based on your YOLO model's class mapping
                     switch(classId) {
                         case 2: // Car
-                            totalVehicleCounts["Car"]++;
+                            activeVehicleCounts["Car"]++;
                             rectangle(resizedFrame, box, carColor, 2);
                             break;
                         case 5: // Bus (adjust based on your model)
-                            totalVehicleCounts["Bus"]++;
+                            activeVehicleCounts["Bus"]++;
                             rectangle(resizedFrame, box, busColor, 2);
                             break;
                         case 7: // Truck (adjust based on your model)
-                            totalVehicleCounts["Truck"]++;
+                            activeVehicleCounts["Truck"]++;
                             rectangle(resizedFrame, box, truckColor, 2);
                             break;
                     }
@@ -122,13 +123,8 @@ void processVideo(VideoCapture& cap, dnn::Net& net, int windowWidth, int windowH
         }
 
         json stats = {
-            {"ActiveVehicleCounts", {
-                {"Car", totalVehicleCounts["Car"]},
-                {"Bus", totalVehicleCounts["Bus"]},
-                {"Truck", totalVehicleCounts["Truck"]}
-            }},
-            {"VehicleCounts", totalVehicleCounts},
-            {"Total", totalVehicleCounts["Car"] + totalVehicleCounts["Bus"] + totalVehicleCounts["Truck"]}
+            {"ActiveVehicleCounts", activeVehicleCounts},
+            {"TotalActiveVehicles", activeVehicleCounts["Car"] + activeVehicleCounts["Bus"] + activeVehicleCounts["Truck"]}
         };
 
         {
