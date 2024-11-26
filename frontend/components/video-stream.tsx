@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
+import WebSocketService from "@/utils/WebSocketService";
 
 export function VideoStream() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -7,49 +8,43 @@ export function VideoStream() {
   const [stats, setStats] = useState({});
 
   useEffect(() => {
-    const socket = new WebSocket("ws://localhost:8080");
-    const canvas = canvasRef.current;
+    const handleData = (data: { frame?: string; stats?: { TotalActiveVehicles?: number; [key: string]: any } }) => {
+      const canvas = canvasRef.current;
 
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-
-        // Decode and display image
-        if (data.frame && canvas) {
-          const ctx = canvas.getContext('2d');
+      // Decode and display image
+      if (data.frame && canvas) {
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
           const img = new Image();
           img.onload = () => {
             canvas.width = img.width;
             canvas.height = img.height;
-            ctx?.drawImage(img, 0, 0);
+            ctx.drawImage(img, 0, 0);
           };
           img.src = `data:image/jpeg;base64,${data.frame}`;
         }
+      }
 
-        // Update stats
-        if (data.stats) {
-          setStats(data.stats);
-          setVehicleCount(data.stats.VehicleCounts?.Car || 0);
-        }
-      } catch (error) {
-        console.error("WebSocket message parsing error:", error);
+      // Update stats
+      if (data.stats) {
+        setStats(data.stats);
+        setVehicleCount(data.stats.TotalActiveVehicles || 0);
       }
     };
 
-    socket.onerror = (error) => {
-      console.error("WebSocket error:", error);
-    };
+    // Use the WebSocketService singleton
+    WebSocketService.addListener(handleData);
+    WebSocketService.connect();
 
-    return () => socket.close();
+    return () => {
+      WebSocketService.removeListener(handleData);
+    };
   }, []);
 
   return (
       <div className="space-y-4">
         <div className="relative rounded-lg overflow-hidden bg-gray-900">
-          <canvas
-              ref={canvasRef}
-              className="w-full aspect-video object-cover"
-          />
+          <canvas ref={canvasRef} className="w-full aspect-video object-cover" />
         </div>
 
         <div className="grid grid-cols-2 gap-4">

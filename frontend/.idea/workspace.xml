@@ -5,8 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b526b748-1b30-4f4c-8742-c4109548c5f1" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/utils/WebSocketService.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/../main.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/traffic-stats.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/traffic-stats.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/vehicle-stats.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/vehicle-stats.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/video-stream.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/video-stream.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -20,6 +23,9 @@
   &quot;associatedIndex&quot;: 1
 }</component>
   <component name="ProjectId" id="2pLkSGOMyVJv2Vi7ii0yAP1zMK6" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
