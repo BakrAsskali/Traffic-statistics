@@ -65,10 +65,32 @@ std::string base64_encode(const unsigned char* data, size_t len) {
     return encoded;
 }
 
-// Function to process video frames and detect vehicles
+// Add direction mapping
+const vector<string> directions = {"NE", "NW", "NS", "SN", "SE", "SW", "EN", "ES", "EW", "WN", "WE", "WS"};
+
+// Function to calculate direction based on bounding box motion
+string calculateDirection(const Point& prevCenter, const Point& currCenter) {
+    int dx = currCenter.x - prevCenter.x;
+    int dy = currCenter.y - prevCenter.y;
+
+    if (dx > 0 && dy < 0) return "NE"; // Example: North-East
+    if (dx > 0 && dy > 0) return "SE"; // Example: South-East
+    if (dx < 0 && dy < 0) return "NW"; // Example: North-West
+    if (dx < 0 && dy > 0) return "SW"; // Example: South-West
+    if (dx == 0 && dy < 0) return "NS"; // Example: North-South
+    if (dx == 0 && dy > 0) return "SN"; // Example: South-North
+    if (dx > 0 && dy == 0) return "EW"; // Example: East-West
+    if (dx < 0 && dy == 0) return "WE"; // Example: West-East
+    }
+
+// Track vehicles across frames
+map<int, Point> previousCenters;
+
+// Update `processVideo`
 void processVideo(VideoCapture& cap, dnn::Net& net, int windowWidth, int windowHeight) {
     Scalar carColor(0, 255, 0), busColor(255, 0, 0), truckColor(0, 0, 255), motorcycleColor(255, 255, 0);
     map<string, VehicleStatistics> vehicleStats = {{"Car", {}}, {"Bus", {}}, {"Truck", {}}, {"Motorcycle", {}}};
+    map<string, map<string, int>> directionStats;
 
     while (true) {
         Mat frame;
@@ -86,6 +108,7 @@ void processVideo(VideoCapture& cap, dnn::Net& net, int windowWidth, int windowH
         net.forward(outputs, net.getUnconnectedOutLayersNames());
 
         map<string, int> frameVehicleCounts = {{"Car", 0}, {"Bus", 0}, {"Truck", 0}, {"Motorcycle", 0}};
+        directionStats.clear(); // Reset direction stats for the current frame
 
         for (size_t i = 0; i < outputs.size(); ++i) {
             float* data = (float*)outputs[i].data;
@@ -103,45 +126,48 @@ void processVideo(VideoCapture& cap, dnn::Net& net, int windowWidth, int windowH
                     string label;
 
                     if (classId == 2) {  // Car
-                        frameVehicleCounts["Car"]++;
                         label = "Car";
                         color = carColor;
                     } else if (classId == 5) {  // Bus
-                        frameVehicleCounts["Bus"]++;
                         label = "Bus";
                         color = busColor;
                     } else if (classId == 7) {  // Truck
-                        frameVehicleCounts["Truck"]++;
                         label = "Truck";
                         color = truckColor;
-                    } else if (classId == 1) {  // Motorcycle
-                        frameVehicleCounts["Motorcycle"]++;
-                        label = "Motorcycle";
-                        color = motorcycleColor;
                     } else {
                         continue;
                     }
 
+                    frameVehicleCounts[label]++;
                     rectangle(resizedFrame, box, color, 2);
                     putText(resizedFrame, label, Point(box.x, box.y - 10), FONT_HERSHEY_SIMPLEX, 0.5, color, 2);
+
+                    // Calculate direction
+                    Point currCenter(xCenter, yCenter);
+                    if (previousCenters.count(classId)) {
+                        string direction = calculateDirection(previousCenters[classId], currCenter);
+                        directionStats[direction][label]++;
+                    }
+                    previousCenters[classId] = currCenter;
                 }
             }
         }
 
         json stats = {
             {"ActiveVehicleCounts", frameVehicleCounts},
-            {"TotalActiveVehicles", frameVehicleCounts["Car"] + frameVehicleCounts["Bus"] + frameVehicleCounts["Truck"] + frameVehicleCounts["Motorcycle"]}
+            {"TotalActiveVehicles", frameVehicleCounts["Car"] + frameVehicleCounts["Bus"] + frameVehicleCounts["Truck"] + frameVehicleCounts["Motorcycle"]},
+            {"DirectionCounts", directionStats}
         };
 
         lock_guard<std::mutex> lock(frameMutex);
         globalFrame = resizedFrame.clone();
         globalStats = stats;
 
-        if (waitKey(1) == 27) break;
+        if (waitKey(1) == 27) break; // Escape key
     }
 }
 
-// WebSocket server to stream frames and statistics
+// WebSocket server
 void websocketServer(boost::asio::io_context& ioc, unsigned short port) {
     tcp::acceptor acceptor(ioc, tcp::endpoint(tcp::v4(), port));
     while (true) {
@@ -164,7 +190,7 @@ void websocketServer(boost::asio::io_context& ioc, unsigned short port) {
                         ws.write(boost::asio::buffer(message.dump()));
                     }
                 }
-                this_thread::sleep_for(chrono::milliseconds(30));
+                this_thread::sleep_for(chrono::milliseconds(1));
             }
         } catch (const std::exception& e) {
             cerr << "WebSocket error: " << e.what() << endl;
@@ -174,14 +200,14 @@ void websocketServer(boost::asio::io_context& ioc, unsigned short port) {
 
 // Main function
 int main() {
-    const string videoPath = "path/to/video.avi";
+    const string videoPath = "/home/bakr/CLionProjects/Projet/5jcg5vfx58-3/Videos 2/2/2.avi";
     VideoCapture cap(videoPath);
     if (!cap.isOpened()) {
         cerr << "Error: Cannot open video file." << endl;
         return -1;
     }
 
-    dnn::Net net = dnn::readNetFromDarknet("path/to/yolov3.cfg", "path/to/yolov3.weights");
+    dnn::Net net = dnn::readNetFromDarknet("/home/bakr/CLionProjects/Projet/yolov3.cfg", "/home/bakr/CLionProjects/Projet/yolov3_final.weights");
     int windowWidth = 800, windowHeight = 600;
 
     thread videoProcessingThread(processVideo, ref(cap), ref(net), windowWidth, windowHeight);

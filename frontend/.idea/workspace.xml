@@ -5,11 +5,17 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b526b748-1b30-4f4c-8742-c4109548c5f1" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/utils/WebSocketService.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../cmake-build-debug/.ninja_deps" beforeDir="false" afterPath="$PROJECT_DIR$/../cmake-build-debug/.ninja_deps" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../cmake-build-debug/.ninja_log" beforeDir="false" afterPath="$PROJECT_DIR$/../cmake-build-debug/.ninja_log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../cmake-build-debug/CMakeFiles/OpenCV.dir/main.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/../cmake-build-debug/CMakeFiles/OpenCV.dir/main.cpp.o" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../cmake-build-debug/CMakeFiles/OpenCV.dir/main.cpp.o.ddi.d" beforeDir="false" afterPath="$PROJECT_DIR$/../cmake-build-debug/CMakeFiles/OpenCV.dir/main.cpp.o.ddi.d" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../cmake-build-debug/CMakeFiles/OpenCV.dir/main.cpp.o.ddi.i" beforeDir="false" afterPath="$PROJECT_DIR$/../cmake-build-debug/CMakeFiles/OpenCV.dir/main.cpp.o.ddi.i" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../cmake-build-debug/OpenCV" beforeDir="false" afterPath="$PROJECT_DIR$/../cmake-build-debug/OpenCV" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../cmake-build-debug/Testing/Temporary/LastTest.log" beforeDir="false" afterPath="$PROJECT_DIR$/../cmake-build-debug/Testing/Temporary/LastTest.log" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/components/traffic-stats.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/traffic-stats.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/components/vehicle-stats.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/vehicle-stats.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/components/video-stream.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/video-stream.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/../main.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -82,6 +88,10 @@
       <updated>1732552741087</updated>
       <workItem from="1732552742282" duration="1607000" />
       <workItem from="1732555549913" duration="998000" />
+      <workItem from="1732700895335" duration="182000" />
+      <workItem from="1732707890669" duration="83000" />
+      <workItem from="1732717256297" duration="245000" />
+      <workItem from="1732719749786" duration="2390000" />
     </task>
     <servers />
   </component>

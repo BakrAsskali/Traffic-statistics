@@ -14,70 +14,53 @@ import { useEffect, useRef, useState } from "react";
 import WebSocketService from "@/utils/WebSocketService";
 
 const directions = [
-  { code: "N", label: "North" },
-  { code: "S", label: "South" },
-  { code: "W", label: "West" },
-  { code: "E", label: "East" },
   { code: "NE", label: "North East" },
   { code: "NW", label: "North West" },
-  { code: "NS", label: "North-South" },
-  { code: "SN", label: "South-North" },
   { code: "SE", label: "South East" },
   { code: "SW", label: "South West" },
-  { code: "EN", label: "East-North" },
-  { code: "ES", label: "East-South" },
   { code: "EW", label: "East-West" },
-  { code: "WN", label: "West-North" },
   { code: "WE", label: "West-East" },
-  { code: "WS", label: "West-South" },
 ];
 
 export function TrafficStats() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [vehicleCount, setVehicleCount] = useState(0);
   const [stats, setStats] = useState<{ [key: string]: any }>({});
   const [trafficData, setTrafficData] = useState<
-      { direction: string; cars: number; buses: number; trucks: number }[]
+      { direction: string; cars: number; buses: number; trucks: number; total: number }[]
   >([]);
 
   useEffect(() => {
-    const handleData = (data: { frame?: string; stats?: any }) => {
-      const canvas = canvasRef.current;
-
-      // Decode and display image
-      if (data.frame && canvas) {
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          const img = new Image();
-          img.onload = () => {
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0);
-          };
-          img.src = `data:image/jpeg;base64,${data.frame}`;
-        }
-      }
-
-      // Update stats and traffic data
+    const handleData = (data: { stats?: any }) => {
       if (data.stats) {
         setStats(data.stats);
-        setVehicleCount(data.stats.TotalVehicles || 0);
-        const newTrafficData = directions.map((direction) => ({
-          direction: direction.label,
-          cars: data.stats.VehicleCounts?.[direction.code]?.Car || 0,
-          buses: data.stats.VehicleCounts?.[direction.code]?.Bus || 0,
-          trucks: data.stats.VehicleCounts?.[direction.code]?.Truck || 0,
-        }));
+        setVehicleCount(data.stats.TotalActiveVehicles || 0);
+
+        // Map direction counts to the traffic data table
+        const newTrafficData = directions.map(({ code, label }) => {
+          const counts = data.stats.DirectionCounts?.[code] || {};
+          const cars = counts.Car || 0;
+          const buses = counts.Bus || 0;
+          const trucks = counts.Truck || 0;
+
+          return {
+            direction: label,
+            cars,
+            buses,
+            trucks,
+            total: cars + buses + trucks,
+          };
+        });
+
         setTrafficData(newTrafficData);
       }
     };
 
-    // Use WebSocketService
     WebSocketService.addListener(handleData);
     WebSocketService.connect();
 
     return () => {
       WebSocketService.removeListener(handleData);
+      WebSocketService.close();
     };
   }, []);
 
@@ -125,19 +108,13 @@ export function TrafficStats() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {trafficData.map(({ direction, cars, buses, trucks }) => (
+              {trafficData.map(({ direction, cars, buses, trucks, total }) => (
                   <TableRow key={direction} className="hover:bg-gray-50">
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-900">{direction}</span>
-                      </div>
-                    </TableCell>
+                    <TableCell className="font-medium text-gray-900">{direction}</TableCell>
                     <TableCell className="text-right text-blue-600">{cars}</TableCell>
                     <TableCell className="text-right text-green-600">{buses}</TableCell>
                     <TableCell className="text-right text-orange-600">{trucks}</TableCell>
-                    <TableCell className="text-right font-semibold text-purple-600">
-                      {cars + buses + trucks}
-                    </TableCell>
+                    <TableCell className="text-right font-semibold text-purple-600">{total}</TableCell>
                   </TableRow>
               ))}
             </TableBody>

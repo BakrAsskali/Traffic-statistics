@@ -48,13 +48,18 @@ export function VideoStream() {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <Card className="p-4 bg-green-50 border-green-100">
+          {/* Active Vehicles Card */}
+          <Card className="p-4 bg-green-50 border-green-100 flex flex-col justify-between">
             <p className="text-sm text-green-600 font-medium">Active Vehicles</p>
             <p className="text-2xl font-bold text-green-700">{vehicleCount}</p>
           </Card>
-          <Card className="p-4 bg-blue-50 border-blue-100">
+
+          {/* Raw Stats Card */}
+          <Card className="p-4 bg-blue-50 border-blue-100 flex flex-col justify-between">
             <p className="text-sm text-blue-600 font-medium">Raw Stats</p>
-            <pre className="text-xs">{JSON.stringify(stats, null, 2)}</pre>
+            <pre className="text-xs overflow-y-auto max-h-24 break-words bg-blue-100 rounded p-2 text-blue-900">
+            {JSON.stringify(stats, null, 2)}
+          </pre>
           </Card>
         </div>
       </div>
