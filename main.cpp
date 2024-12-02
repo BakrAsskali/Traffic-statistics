@@ -65,6 +65,13 @@ std::string base64_encode(const unsigned char* data, size_t len) {
     return encoded;
 }
 
+// Intersection over Union (IoU) calculation for object tracking
+float iou(const Rect& boxA, const Rect& boxB) {
+    float intersectionArea = (boxA & boxB).area();
+    float unionArea = boxA.area() + boxB.area() - intersectionArea;
+    return intersectionArea / unionArea;
+}
+
 // Add direction mapping
 const vector<string> directions = {"NE", "NW", "NS", "SN", "SE", "SW", "EN", "ES", "EW", "WN", "WE", "WS"};
 
@@ -73,18 +80,19 @@ string calculateDirection(const Point& prevCenter, const Point& currCenter) {
     int dx = currCenter.x - prevCenter.x;
     int dy = currCenter.y - prevCenter.y;
 
-    if (dx > 0 && dy < 0) return "NE"; // Example: North-East
-    if (dx > 0 && dy > 0) return "SE"; // Example: South-East
-    if (dx < 0 && dy < 0) return "NW"; // Example: North-West
-    if (dx < 0 && dy > 0) return "SW"; // Example: South-West
-    if (dx == 0 && dy < 0) return "NS"; // Example: North-South
-    if (dx == 0 && dy > 0) return "SN"; // Example: South-North
-    if (dx > 0 && dy == 0) return "EW"; // Example: East-West
-    if (dx < 0 && dy == 0) return "WE"; // Example: West-East
-    }
+    if (dx > 0 && dy < 0) return "NE"; // North-East
+    if (dx > 0 && dy > 0) return "SE"; // South-East
+    if (dx < 0 && dy < 0) return "NW"; // North-West
+    if (dx < 0 && dy > 0) return "SW"; // South-West
+    if (dx == 0 && dy < 0) return "NS"; // North-South
+    if (dx == 0 && dy > 0) return "SN"; // South-North
+    if (dx > 0 && dy == 0) return "EW"; // East-West
+    if (dx < 0 && dy == 0) return "WE"; // West-East
+    return "Unknown";
+}
 
 // Track vehicles across frames
-map<int, Point> previousCenters;
+map<int, Rect> previousCenters;
 
 // Update `processVideo`
 void processVideo(VideoCapture& cap, dnn::Net& net, int windowWidth, int windowHeight) {
@@ -107,8 +115,9 @@ void processVideo(VideoCapture& cap, dnn::Net& net, int windowWidth, int windowH
         vector<Mat> outputs;
         net.forward(outputs, net.getUnconnectedOutLayersNames());
 
-        map<string, int> frameVehicleCounts = {{"Car", 0}, {"Bus", 0}, {"Truck", 0}, {"Motorcycle", 0}};
-        directionStats.clear(); // Reset direction stats for the current frame
+        vector<Rect> boxes;
+        vector<float> confidences;
+        vector<int> classIds;
 
         for (size_t i = 0; i < outputs.size(); ++i) {
             float* data = (float*)outputs[i].data;
@@ -121,36 +130,60 @@ void processVideo(VideoCapture& cap, dnn::Net& net, int windowWidth, int windowH
                     int width = int(data[2] * resizedFrame.cols);
                     int height = int(data[3] * resizedFrame.rows);
 
-                    Rect box(xCenter - width / 2, yCenter - height / 2, width, height);
-                    Scalar color;
-                    string label;
-
-                    if (classId == 2) {  // Car
-                        label = "Car";
-                        color = carColor;
-                    } else if (classId == 5) {  // Bus
-                        label = "Bus";
-                        color = busColor;
-                    } else if (classId == 7) {  // Truck
-                        label = "Truck";
-                        color = truckColor;
-                    } else {
-                        continue;
-                    }
-
-                    frameVehicleCounts[label]++;
-                    rectangle(resizedFrame, box, color, 2);
-                    putText(resizedFrame, label, Point(box.x, box.y - 10), FONT_HERSHEY_SIMPLEX, 0.5, color, 2);
-
-                    // Calculate direction
-                    Point currCenter(xCenter, yCenter);
-                    if (previousCenters.count(classId)) {
-                        string direction = calculateDirection(previousCenters[classId], currCenter);
-                        directionStats[direction][label]++;
-                    }
-                    previousCenters[classId] = currCenter;
+                    boxes.emplace_back(xCenter - width / 2, yCenter - height / 2, width, height);
+                    confidences.push_back(confidence);
+                    classIds.push_back(classId);
                 }
             }
+        }
+
+        vector<int> indices;
+        dnn::NMSBoxes(boxes, confidences, 0.5, 0.4, indices);
+
+        map<string, int> frameVehicleCounts = {{"Car", 0}, {"Bus", 0}, {"Truck", 0}, {"Motorcycle", 0}};
+        directionStats.clear(); // Reset direction stats for the current frame
+
+        for (int idx : indices) {
+            Rect box = boxes[idx];
+            int classId = classIds[idx];
+            Scalar color;
+            string label;
+
+            if (classId == 2) {  // Car
+                label = "Car";
+                color = carColor;
+                frameVehicleCounts["Car"]++;
+            } else if (classId == 5) {  // Bus
+                label = "Bus";
+                color = busColor;
+                frameVehicleCounts["Bus"]++;
+            } else if (classId == 7) {  // Truck
+                label = "Truck";
+                color = truckColor;
+                frameVehicleCounts["Truck"]++;
+            } else {
+                continue;
+            }
+
+            // Tracking and direction calculation
+            Point currCenter(box.x + box.width / 2, box.y + box.height / 2);
+            if (previousCenters.count(idx)) {
+                // Use IoU for more robust tracking
+                if (iou(previousCenters[idx], box) < 0.5) {
+                    string direction = calculateDirection(
+                        Point(previousCenters[idx].x + previousCenters[idx].width / 2,
+                              previousCenters[idx].y + previousCenters[idx].height / 2),
+                        currCenter
+                    );
+                    directionStats[direction][label]++;
+                }
+                previousCenters[idx] = box;
+            } else {
+                previousCenters[idx] = box;
+            }
+
+            rectangle(resizedFrame, box, color, 2);
+            putText(resizedFrame, label, Point(box.x, box.y - 10), FONT_HERSHEY_SIMPLEX, 0.5, color, 2);
         }
 
         json stats = {
@@ -199,15 +232,21 @@ void websocketServer(boost::asio::io_context& ioc, unsigned short port) {
 }
 
 // Main function
-int main() {
-    const string videoPath = "/home/bakr/CLionProjects/Projet/5jcg5vfx58-3/Videos 2/2/2.avi";
+int main(int argc, char* argv[]) {
+    // Allow video path to be passed as a command-line argument
+    string videoPath = argc > 1 ? argv[1] : "/home/bakr/CLionProjects/Projet/5jcg5vfx58-3/Videos 1/1/1.avi";
+
     VideoCapture cap(videoPath);
     if (!cap.isOpened()) {
         cerr << "Error: Cannot open video file." << endl;
         return -1;
     }
 
-    dnn::Net net = dnn::readNetFromDarknet("/home/bakr/CLionProjects/Projet/yolov3.cfg", "/home/bakr/CLionProjects/Projet/yolov3_final.weights");
+    // Allow configuration paths to be passed as command-line arguments
+    string cfgPath = argc > 2 ? argv[2] : "/home/bakr/CLionProjects/Projet/yolov3.cfg";
+    string weightsPath = argc > 3 ? argv[3] : "/home/bakr/CLionProjects/Projet/yolov3_final.weights";
+
+    dnn::Net net = dnn::readNetFromDarknet(cfgPath, weightsPath);
     int windowWidth = 800, windowHeight = 600;
 
     thread videoProcessingThread(processVideo, ref(cap), ref(net), windowWidth, windowHeight);
