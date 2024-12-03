@@ -5,14 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b526b748-1b30-4f4c-8742-c4109548c5f1" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/../cmake-build-debug/.cmake/api/v1/reply/index-2024-11-25T17-26-29-0444.json" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/../cmake-build-debug/.ninja_deps" beforeDir="false" afterPath="$PROJECT_DIR$/../cmake-build-debug/.ninja_deps" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../cmake-build-debug/.ninja_log" beforeDir="false" afterPath="$PROJECT_DIR$/../cmake-build-debug/.ninja_log" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../cmake-build-debug/CMakeFiles/OpenCV.dir/main.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/../cmake-build-debug/CMakeFiles/OpenCV.dir/main.cpp.o" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../cmake-build-debug/CMakeFiles/OpenCV.dir/main.cpp.o.ddi.i" beforeDir="false" afterPath="$PROJECT_DIR$/../cmake-build-debug/CMakeFiles/OpenCV.dir/main.cpp.o.ddi.i" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../cmake-build-debug/OpenCV" beforeDir="false" afterPath="$PROJECT_DIR$/../cmake-build-debug/OpenCV" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../cmake-build-debug/Testing/Temporary/LastTest.log" beforeDir="false" afterPath="$PROJECT_DIR$/../cmake-build-debug/Testing/Temporary/LastTest.log" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/../main.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/vehicle-stats.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/vehicle-stats.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -92,6 +90,8 @@
       <workItem from="1732723479087" duration="609000" />
       <workItem from="1732727155209" duration="7000" />
       <workItem from="1733126550211" duration="225000" />
+      <workItem from="1733214266441" duration="532000" />
+      <workItem from="1733234442509" duration="1805000" />
     </task>
     <servers />
   </component>

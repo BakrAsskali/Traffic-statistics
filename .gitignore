@@ -1,3 +1,8 @@
 yolov3.cfg
 yolov3.weights
 yolov3_final.weights
+Finetuning/5jcg5vfx58-3
+Finetuning/darknet
+Finetuning/bad.list
+Finetuning/yolov3.weights
+Finetuning/yolov3.cfg
